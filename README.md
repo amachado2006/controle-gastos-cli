@@ -97,4 +97,4 @@ Arthur Machado
 
 ## 🔗 Repositório
 
-https://github.com/SEU_USUARIO/controle-gastos-cli
+https://github.com/amachado2006
