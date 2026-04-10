@@ -1,7 +1,5 @@
 # 💸 Controle de Gastos Pessoais (CLI)
 
-![CI](https://github.com/amachado2006/controle-gastos-cli/actions/workflows/ci.yml/badge.svg)
-
 ## 📌 Descrição do Problema Real
 
 Muitas pessoas têm dificuldade em saber para onde vai o dinheiro no fim do mês. A falta de controle financeiro é uma dor real e frequente, especialmente entre estudantes e jovens adultos. Sem um registro simples dos gastos, é difícil economizar ou planejar o futuro.
