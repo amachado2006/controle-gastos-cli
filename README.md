@@ -1,6 +1,6 @@
 # 💸 Controle de Gastos Pessoais (CLI)
 
-![CI](https://github.com/SEU_USUARIO/controle-gastos-cli/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/amachado2006/controle-gastos-cli/actions/workflows/ci.yml/badge.svg)
 
 ## 📌 Descrição do Problema Real
 
@@ -93,9 +93,7 @@ flake8 src/ tests/ --max-line-length=100
 
 **1.0.0**
 
-## 👤 Autor
-
-Seu Nome Aqui
+Arthur Machado
 
 ## 🔗 Repositório
 
