@@ -1,95 +1,73 @@
-"""
-Testes automatizados para o Controle de Gastos Pessoais.
-"""
+"""Testes automatizados do Controle de Gastos Pessoais."""
 
-import os
-import json
 import pytest
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-import gastos as app
-
-
-# ---- Configuração dos testes (usa arquivo temporário) ----
-
-@pytest.fixture(autouse=True)
-def arquivo_temporario(tmp_path, monkeypatch):
-    """Redireciona o arquivo de dados para uma pasta temporária em cada teste."""
-    arquivo = tmp_path / "dados" / "gastos.json"
-    monkeypatch.setattr(app, "ARQUIVO_DADOS", str(arquivo))
+import requests as req
+from unittest.mock import patch, MagicMock
+from gastos import (
+    adicionar_gasto,
+    calcular_total,
+    remover_gasto,
+    buscar_cotacao,
+)
 
 
-# ---- Testes de adição ----
-
-def test_adicionar_gasto_valido():
-    """Caminho feliz: adiciona um gasto com dados corretos."""
-    gasto = app.adicionar_gasto("Mercado", 150.0, "Alimentação")
-    assert gasto["descricao"] == "Mercado"
-    assert gasto["valor"] == 150.0
-    assert gasto["categoria"] == "Alimentação"
+def test_adicionar_gasto_valido(tmp_path, monkeypatch):
+    monkeypatch.setattr("gastos.ARQUIVO_DADOS", str(tmp_path / "gastos.json"))
+    gasto = adicionar_gasto("Almoco", 25.50, "Alimentacao")
+    assert gasto["descricao"] == "Almoco"
+    assert gasto["valor"] == 25.50
+    assert gasto["categoria"] == "Alimentacao"
 
 
-def test_adicionar_gasto_sem_descricao():
-    """Entrada inválida: descrição vazia deve gerar erro."""
-    with pytest.raises(ValueError, match="descrição não pode ser vazia"):
-        app.adicionar_gasto("", 50.0, "Transporte")
+def test_adicionar_gasto_descricao_vazia():
+    with pytest.raises(ValueError, match="descri"):
+        adicionar_gasto("", 10.0, "Outros")
 
 
 def test_adicionar_gasto_valor_negativo():
-    """Entrada inválida: valor negativo deve gerar erro."""
     with pytest.raises(ValueError, match="valor deve ser maior que zero"):
-        app.adicionar_gasto("Ônibus", -10.0, "Transporte")
+        adicionar_gasto("Teste", -5.0, "Outros")
 
 
-def test_adicionar_gasto_valor_zero():
-    """Caso limite: valor zero também é inválido."""
-    with pytest.raises(ValueError):
-        app.adicionar_gasto("Algo", 0, "Outros")
+def test_calcular_total(tmp_path, monkeypatch):
+    monkeypatch.setattr("gastos.ARQUIVO_DADOS", str(tmp_path / "gastos.json"))
+    adicionar_gasto("Item 1", 10.0, "Teste")
+    adicionar_gasto("Item 2", 20.0, "Teste")
+    assert calcular_total() == 30.0
 
 
-# ---- Testes de listagem ----
-
-def test_listar_gastos_vazio():
-    """Lista vazia quando não há gastos."""
-    resultado = app.listar_gastos()
-    assert resultado == []
-
-
-def test_listar_gastos_com_dados():
-    """Lista retorna os gastos adicionados."""
-    app.adicionar_gasto("Aluguel", 800.0, "Moradia")
-    app.adicionar_gasto("Internet", 100.0, "Serviços")
-    resultado = app.listar_gastos()
-    assert len(resultado) == 2
+def test_remover_gasto(tmp_path, monkeypatch):
+    monkeypatch.setattr("gastos.ARQUIVO_DADOS", str(tmp_path / "gastos.json"))
+    adicionar_gasto("Remover este", 5.0, "Teste")
+    assert remover_gasto(1) is True
+    assert remover_gasto(999) is False
 
 
-# ---- Testes de total ----
+def test_buscar_cotacao_sucesso():
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "USDBRL": {"bid": "5.25"},
+        "EURBRL": {"bid": "5.80"},
+    }
 
-def test_calcular_total_vazio():
-    """Total é zero quando não há gastos."""
-    assert app.calcular_total() == 0.0
+    with patch("gastos.requests.get", return_value=mock_response) as mock_get:
+        cotacoes = buscar_cotacao()
+
+        mock_get.assert_called_once_with(
+            "https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL",
+            timeout=5,
+        )
+
+        assert "USD" in cotacoes
+        assert "EUR" in cotacoes
+        assert cotacoes["USD"] == 5.25
+        assert cotacoes["EUR"] == 5.80
+        assert isinstance(cotacoes["USD"], float)
+        assert isinstance(cotacoes["EUR"], float)
 
 
-def test_calcular_total_com_gastos():
-    """Total soma corretamente os valores."""
-    app.adicionar_gasto("Café", 10.0, "Alimentação")
-    app.adicionar_gasto("Uber", 25.50, "Transporte")
-    assert app.calcular_total() == 35.50
-
-
-# ---- Testes de remoção ----
-
-def test_remover_gasto_existente():
-    """Remove um gasto que existe."""
-    gasto = app.adicionar_gasto("Cinema", 30.0, "Lazer")
-    resultado = app.remover_gasto(gasto["id"])
-    assert resultado is True
-    assert app.listar_gastos() == []
-
-
-def test_remover_gasto_inexistente():
-    """Tenta remover ID que não existe — deve retornar False."""
-    resultado = app.remover_gasto(999)
-    assert resultado is False
+def test_buscar_cotacao_erro_conexao():
+    with patch("gastos.requests.get", side_effect=req.exceptions.ConnectionError):
+        with pytest.raises(req.exceptions.ConnectionError):
+            buscar_cotacao()

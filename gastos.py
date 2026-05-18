@@ -5,8 +5,21 @@ Aplicação para registrar e acompanhar gastos do dia a dia.
 
 import json
 import os
+import requests
 
 ARQUIVO_DADOS = "dados/gastos.json"
+API_COTACAO_URL = "https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL"
+
+
+def buscar_cotacao():
+    """Busca a cotação atual do dólar e euro via AwesomeAPI."""
+    response = requests.get(API_COTACAO_URL, timeout=5)
+    response.raise_for_status()
+    dados = response.json()
+    return {
+        "USD": float(dados["USDBRL"]["bid"]),
+        "EUR": float(dados["EURBRL"]["bid"]),
+    }
 
 
 def carregar_gastos():
@@ -30,7 +43,6 @@ def adicionar_gasto(descricao, valor, categoria):
         raise ValueError("A descrição não pode ser vazia.")
     if valor <= 0:
         raise ValueError("O valor deve ser maior que zero.")
-
     gastos = carregar_gastos()
     novo = {
         "id": len(gastos) + 1,
@@ -70,6 +82,7 @@ def exibir_menu():
     print("2. Listar gastos")
     print("3. Ver total gasto")
     print("4. Remover gasto")
+    print("5. Ver cotação de moedas (USD/EUR)")
     print("0. Sair")
     print("========================================")
 
@@ -112,9 +125,19 @@ def main():
             except ValueError:
                 print("❌ ID inválido.")
 
+        elif opcao == "5":
+            print("\n🌐 Buscando cotações...")
+            try:
+                cotacoes = buscar_cotacao()
+                print(f"💵 Dólar (USD): R$ {cotacoes['USD']:.2f}")
+                print(f"💶 Euro  (EUR): R$ {cotacoes['EUR']:.2f}")
+            except Exception as e:
+                print(f"❌ Erro ao buscar cotação: {e}")
+
         elif opcao == "0":
             print("\nAté logo! 👋")
             break
+
         else:
             print("\n❌ Opção inválida. Tente novamente.")
 
